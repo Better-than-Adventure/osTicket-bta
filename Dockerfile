@@ -12,6 +12,7 @@ RUN apt install -y git \
 		libc-client-dev \
 		libkrb5-dev
 RUN a2enmod remoteip
+RUN a2enmod rewrite
 RUN docker-php-ext-configure imap --with-kerberos --with-imap-ssl
 RUN docker-php-ext-install mysqli imap
 RUN docker-php-ext-enable mysqli imap
