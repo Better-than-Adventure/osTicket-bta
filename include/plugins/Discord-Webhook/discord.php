@@ -125,7 +125,8 @@ class DiscordPlugin extends Plugin {
                     throw new \Exception(
                         'Error sending to: ' . $url
                         . ' Http code: ' . $statusCode
-                        . ' curl-error: ' . curl_errno($ch));
+                        . ' curl-error: ' . curl_errno($ch)
+                        . ' payload: ' . $payload);
                 }
             }
         } catch (\Exception $e) {
@@ -221,6 +222,58 @@ class DiscordPlugin extends Plugin {
     {
         global $cfg;
         $timestamp = date("c", strtotime("now"));
+
+        $message = $ticket->getLastMessage()->getBody();
+
+        $embed = [
+             // Embed Title
+             "title" =>  $this->format_text($type . $ticket->getSubject()),
+
+             // Embed Type
+             "type" => "rich",
+
+             // URL of title link
+             "url" => $cfg->getUrl() . '/scp/tickets.php?id=' . $ticket->getId(),
+
+             // Timestamp of embed must be formatted as ISO8601
+             "timestamp" => $timestamp,
+
+             // Embed left border color in HEX
+             "color" => hexdec( "5aa938" ),
+
+             // Additional Fields array
+             "fields" => [
+                 [
+                     "name" => "Ticket Type",
+                     "value" => $ticket->getHelpTopic(),
+                     "inline" => true
+                 ],
+                 [
+                     "name" => "Status",
+                     "value" => $ticket->getStatus()->name,
+                     "inline" => true
+                 ],
+                 [
+                     "name" => "Message",
+                     "value" => $message,
+                     "inline" => false
+                 ]
+                 // Etc..
+             ],
+
+             // Footer
+             "footer" => [
+                 "text" => $cfg->getUrl(),
+                 "icon_url" => $this->get_gravatar($ticket->getEmail()),
+             ],
+
+             // Author
+             "author" => [
+                 "name" => "BTA! Support",
+                 "url" => $this->get_gravatar($ticket->getEmail()),
+             ],
+        ];
+
         //Prepare message array to convert to json
         $message = [
             // Username
@@ -237,61 +290,8 @@ class DiscordPlugin extends Plugin {
             // "file" => "",
 
             // Embeds Array
-            "embeds" => [
-                [
-                    // Embed Title
-                    "title" =>  $this->format_text($type . $ticket->getSubject()),
-
-                    // Embed Type
-                    "type" => "rich",
-
-                    // URL of title link
-                    "url" => $cfg->getUrl() . '/scp/tickets.php?id=' . $ticket->getId(),
-
-                    // Timestamp of embed must be formatted as ISO8601
-                    "timestamp" => $timestamp,
-
-                    // Embed left border color in HEX
-                    "color" => hexdec( "5aa938" ),
-
-                    // Additional Fields array
-                    "fields" => [
-                        [
-                            "name" => "Ticket Type",
-                            "value" => $ticket->getHelpTopic(),
-                            "inline" => true
-                        ],
-                        [
-                            "name" => "Status",
-                            "value" => $ticket->getStatus(),
-                            "inline" => true
-                        ],
-                        [
-                            "name" => "Status",
-                            "value" => $ticket->getStatus(),
-                            "inline" => false
-                        ],
-                        [
-                            "name" => "Message",
-                            "value" => $ticket->getLastMessage()->getBody(),
-                            "inline" => false
-                        ]
-                        // Etc..
-                    ],
-
-                    // Footer
-                    "footer" => [
-                        "text" => $cfg->getUrl(),
-                        "icon_url" => $this->get_gravatar($ticket->getEmail()),
-                    ],
-
-                    // Author
-                    "author" => [
-                        "name" => "BTA! Support",
-                        "url" => $this->get_gravatar($ticket->getEmail()),
-                    ],
-                ]
-            ]];
+            "embeds" => [$embed]
+        ];
 
         return json_encode($message, JSON_UNESCAPED_SLASHES);
 
