@@ -260,6 +260,21 @@ class DiscordPlugin extends Plugin {
                             "name" => "Ticket Type",
                             "value" => $ticket->getHelpTopic(),
                             "inline" => true
+                        ],
+                        [
+                            "name" => "Status",
+                            "value" => $ticket->getStatus(),
+                            "inline" => true
+                        ],
+                        [
+                            "name" => "Status",
+                            "value" => $ticket->getStatus(),
+                            "inline" => false
+                        ],
+                        [
+                            "name" => "Message",
+                            "value" => $ticket->getLastMessage()->getBody(),
+                            "inline" => false
                         ]
                         // Etc..
                     ],
