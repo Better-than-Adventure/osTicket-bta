@@ -255,7 +255,7 @@ class DiscordPlugin extends Plugin {
                  ],
                  [
                      "name" => "Message",
-                     "value" => $message,
+                     "value" => strip_tags($ticket->getLastMessage()->getBody()->toHtml()),
                      "inline" => false
                  ]
                  // Etc..
