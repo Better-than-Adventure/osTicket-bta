@@ -101,7 +101,7 @@ if ($settings['keywords']) {
         $tickets->filter(array('number__startswith'=>$q));
     } elseif (strlen($q) > 2) { //Deep search!
         // Use the search engine to perform the search
-        $tickets = $ost->searcher->find($q, $tickets);
+        $tickets = $ost->searcher->find($q, $tickets, true, ['boolean' => false]);
     }
 }
 

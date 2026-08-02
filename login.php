@@ -48,8 +48,9 @@ if ($_POST) {
 if ($_POST && isset($_POST['luser'])) {
     if (!$_POST['luser'])
         $errors['err'] = __('Valid username or email address is required');
-    elseif (($user = UserAuthenticationBackend::process(trim($_POST['luser']),
-            substr($_POST['lpasswd'], 0, 128), $errors))) {
+    elseif (Validator::is_userid(trim($_POST['luser']), $errors['err'], false)
+            && ($user = UserAuthenticationBackend::process(trim($_POST['luser']),
+                substr($_POST['lpasswd'], 0, 128), $errors))) {
         if ($user instanceof ClientCreateRequest) {
             if ($cfg && $cfg->isClientRegistrationEnabled()) {
                 // Attempt to automatically register

@@ -88,7 +88,7 @@ class UserSession {
         list($hash, $expire, $ip) = explode(':', $token);
 
         // Make sure the session hash is valid
-        if ((md5($expire . SESSION_SECRET . $this->userID) != $hash))
+        if (!hash_equals(md5($expire . SESSION_SECRET . $this->userID), $hash))
             return false;
 
         // is it expired??

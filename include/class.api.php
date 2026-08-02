@@ -146,7 +146,7 @@ class API {
             $sql='INSERT INTO '.API_KEY_TABLE.' SET '.$sql
                 .',created=NOW() '
                 .',ipaddr='.db_input($vars['ipaddr'])
-                .',apikey='.db_input(strtoupper(md5(time().$vars['ipaddr'].md5(Misc::randCode(16)))));
+                .',apikey='.db_input(strtoupper(Misc::randCode(48, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789')));
 
             if(db_query($sql) && ($id=db_insert_id()))
                 return $id;
@@ -353,7 +353,7 @@ class ApiController extends Controller {
         // TODO: Only include API Key when in debug mode to avoid
         // potentialialy leaking a valid key in system logs
         if (($key=$this->getApiKey()))
-            $msg .= "\n[$key]\n";
+            $msg .= sprintf("\n[%s]\n", Format::shroud($key, 8, 16));
 
         $title = sprintf('%s (%s)', $title ?: __('API Error'), $code);
         $this->logError($title, $msg, $logOnly);
@@ -387,8 +387,8 @@ class ApiXmlDataParser extends XmlDataParser {
     function fixup($current) {
         global $cfg;
 
-		if($current['ticket'])
-			$current = $current['ticket'];
+        if (isset($current['ticket']))
+            $current = $current['ticket'];
 
         if (!is_array($current))
             return $current;

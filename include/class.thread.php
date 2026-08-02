@@ -1665,13 +1665,14 @@ implements TemplateVariable {
 
         $entry = new static(array(
             'created' => SqlFunction::NOW(),
+            'updated' => SqlFunction::NOW(),
             'type' => $vars['type'],
             'thread_id' => $vars['threadId'],
             'title' => Format::strip_emoticons(Format::sanitize($vars['title'], true)),
             'format' => $vars['body']->getType(),
             'staff_id' => $vars['staffId'],
             'user_id' => $vars['userId'],
-            'poster' => $poster,
+            'poster' => Format::sanitize($poster),
             'source' => $vars['source'],
             'flags' => $vars['flags'] ?: 0,
         ));
@@ -1756,6 +1757,10 @@ implements TemplateVariable {
                         $files[$i]['inline'] = true;
                 }
                 foreach ($entry->normalizeFileInfo($files) as $F) {
+                    if (!empty($F['inline'])
+                            && (!isset($F['file']) || !$F['file']->isInlineSafeImage()))
+                        $F['inline'] = false;
+
                     // Deduplicate on the `key` attribute. The key is
                     // necessary for the CID rewrite below
                     $attached_files[$F['key']] = $F;
@@ -1768,6 +1773,9 @@ implements TemplateVariable {
         // discarded, only the unique hash-code (key) will be available to
         // retrieve the image later
         foreach ($attached_files as $key => $a) {
+            if (empty($a['inline']))
+                continue;
+
             if (isset($a['cid']) && $a['cid']) {
                 $body = preg_replace('/src=("|\'|\b)(?:cid:)?'
                     . preg_quote($a['cid'], '/').'\1/i',
@@ -2201,8 +2209,8 @@ class ThreadEvent extends VerySimpleModel {
 
         $inst = self::create(array(
             'thread_type' => ObjectModel::OBJECT_TYPE_TICKET,
-            'staff_id' => $staff,
-            'team_id' => $ticket->getTeamId(),
+            'staff_id' => $staff ?: 0,
+            'team_id' => $ticket->getTeamId() ?: 0,
             'dept_id' => $ticket->getDeptId(),
             'topic_id' => $ticket->getTopicId(),
         ), $user);
@@ -2212,8 +2220,8 @@ class ThreadEvent extends VerySimpleModel {
     static function forTask($task, $state, $user=false) {
         $inst = self::create(array(
             'thread_type' => ObjectModel::OBJECT_TYPE_TASK,
-            'staff_id' => $task->getStaffId(),
-            'team_id' => $task->getTeamId(),
+            'staff_id' => $task->getStaffId() ?: 0,
+            'team_id' => $task->getTeamId() ?: 0,
             'dept_id' => $task->getDeptId(),
         ), $user);
         return $inst;

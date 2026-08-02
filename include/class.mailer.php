@@ -27,7 +27,7 @@ class Mailer {
     var $options = array();
     var $eol="\n";
 
-    function __construct(\Email $email=null, array $options=array()) {
+    function __construct(?\Email $email=null, array $options=array()) {
         global $cfg;
 
         // Get all possible outgoing emails accounts (SMTP) to try
@@ -77,7 +77,7 @@ class Mailer {
             $this->from = $from;
         elseif (\Validator::is_email($from)) {
             $this->from = new \EmailAddress(
-                    sprintf('"%s" <%s>', $name ?: '', $from));
+                    str_contains($from, '<') ? $from : sprintf('"%s" <%s>', $name ?: '', $from));
         } elseif (is_string($from))
             $this->from = new \EmailAddress($from);
         elseif (($email=$this->getEmail())) {

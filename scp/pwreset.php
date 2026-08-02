@@ -39,6 +39,7 @@ if($_POST) {
     }
     switch ($_POST['do']) {
         case 'sendmail':
+            $start = microtime(true);
             $userid = (string) $_POST['userid'];
             if (Validator::is_userid($userid)
                     && ($staff=Staff::lookup($userid))) {
@@ -50,6 +51,15 @@ if($_POST) {
             }
             else
                 $tpl = 'pwreset.sent.php';
+
+            $min = 1.4;
+            $jitter = random_int(0, 250) / 1000;
+            $target = $min + $jitter;
+
+            $elapsed = microtime(true) - $start;
+            if ($elapsed < $target)
+                usleep((int)(($target - $elapsed) * 1_000_000));
+
             break;
         case 'newpasswd':
             // TODO: Compare passwords

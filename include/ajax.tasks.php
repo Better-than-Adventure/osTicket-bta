@@ -59,10 +59,17 @@ class TasksAjaxAPI extends AjaxController {
     }
 
     function triggerThreadAction($task_id, $thread_id, $action) {
+        global $thisstaff;
+
+        if (!($task = Task::lookup($task_id))
+                || !$task->checkStaffPerm($thisstaff))
+            Http::response(404, 'No such task thread entry');
+
         $thread = ThreadEntry::lookup($thread_id);
         if (!$thread)
             Http::response(404, 'No such task thread entry');
-        if ($thread->getThread()->getObjectId() != $task_id)
+        if ($thread->getThread()->getObjectType() != 'A'
+                || $thread->getThread()->getObjectId() != $task_id)
             Http::response(404, 'No such task thread entry');
 
         $valid = false;

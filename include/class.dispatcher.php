@@ -29,9 +29,11 @@ class Dispatcher {
     function resolve($url, $args=null) {
         if ($this->file) { $this->lazy_load(); }
         # Support HTTP method emulation with the _method GET argument
-        if (isset($_GET['_method'])) {
-            $_SERVER['REQUEST_METHOD'] = strtoupper($_GET['_method']);
-            unset($_GET['_method']);
+        if ($_SERVER['REQUEST_METHOD'] == 'POST'
+                && isset($_POST['_method'])
+                && in_array(strtoupper($_POST['_method']), array('PUT', 'PATCH', 'DELETE'))) {
+            $_SERVER['REQUEST_METHOD'] = strtoupper($_POST['_method']);
+            unset($_POST['_method']);
         }
         // Decode URL for accurate matching
         $url = urldecode($url);

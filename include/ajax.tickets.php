@@ -23,7 +23,7 @@ include_once INCLUDE_DIR . 'class.thread_actions.php';
 
 class TicketsAjaxAPI extends AjaxController {
 
-    function lookup() {
+    function lookup($wildcard=false) {
         global $thisstaff;
 
         $limit = isset($_REQUEST['limit']) ? (int) $_REQUEST['limit']:25;
@@ -53,7 +53,7 @@ class TicketsAjaxAPI extends AjaxController {
             return $this->encode(array());
 
         global $ost;
-        $hits = $ost->searcher->find($q, $hits, false);
+        $hits = $ost->searcher->find($q, $hits, false, ['boolean' => $wildcard]);
 
         $T = array();
         if (preg_match('/\d{2,}[^*]/', $q, $T)) {
@@ -62,10 +62,10 @@ class TicketsAjaxAPI extends AjaxController {
         elseif (preg_match('/(.*@.{2,})|(.{2,}@.*)/', $q, $T)) {
             $hits = $this->lookupByEmail($limit, $visibility, $hits);
         }
-        elseif (!count($hits) && preg_match('`\w$`u', $q)) {
+        elseif (!$wildcard && !count($hits) && preg_match('`^[a-zA-Z0-9]+$`u', $q)) {
             // Do wild-card fulltext search
             $_REQUEST['q'] = $q.'*';
-            return $this->lookup();
+            return $this->lookup(true);
         }
 
         // TODO: Why not aggregate based on relationship?
@@ -777,6 +777,8 @@ class TicketsAjaxAPI extends AjaxController {
 
         if (!($ticket=Ticket::lookup($tid)))
             Http::response(404, __('No such ticket'));
+        elseif (!$ticket->checkStaffPerm($thisstaff))
+            Http::response(403, __('Permission denied'));
         elseif (!($field=$ticket->getField($fid)))
             Http::response(404, __('No such field'));
 
@@ -1702,10 +1704,17 @@ class TicketsAjaxAPI extends AjaxController {
     }
 
     function triggerThreadAction($ticket_id, $thread_id, $action) {
+        global $thisstaff;
+
+        if (!($ticket = Ticket::lookup($ticket_id))
+                || !$ticket->checkStaffPerm($thisstaff))
+            Http::response(404, 'No such ticket thread entry');
+
         $thread = ThreadEntry::lookup($thread_id);
         if (!$thread)
             Http::response(404, 'No such ticket thread entry');
-        if ($thread->getThread()->getObjectId() != $ticket_id)
+        if ($thread->getThread()->getObjectType() != 'T'
+                || $thread->getThread()->getObjectId() != $ticket_id)
             Http::response(404, 'No such ticket thread entry');
 
         $valid = false;

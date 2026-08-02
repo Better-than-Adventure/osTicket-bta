@@ -1789,6 +1789,10 @@ class BooleanField extends FormField {
         return ($value) ? __('Yes') : __('No');
     }
 
+    function asVar($value, $id=false) {
+        return $this->toString($value);
+    }
+
     function getClean($validate=true) {
         if (!isset($this->_clean)) {
             $this->_clean = (isset($this->value))
@@ -2565,26 +2569,26 @@ class DatetimeField extends FormField {
                 "{$name}__lte" =>  $right->format('Y-m-d H:i:s'),
             ));
         case 'ndaysago':
-            $int = $intervals[$value['int'] ?: 'd'] ?: 'DAY';
+            $int = $intervals[(string) $value['int'] ?: 'd'] ?: 'DAY';
             $interval = new SqlInterval($int, $value['until']);
             return new Q(array(
                 "{$name}__range" => array($now->minus($interval), $now),
             ));
         case 'ndays':
-            $int = $intervals[$value['int'] ?: 'd'] ?: 'DAY';
+            $int = $intervals[(string) $value['int'] ?: 'd'] ?: 'DAY';
             $interval = new SqlInterval($int, $value['until']);
             return new Q(array(
                 "{$name}__range" => array($now, $now->plus($interval)),
             ));
         // Distant past and future ranges
         case 'distpast':
-            $int = $intervals[$value['int'] ?: 'd'] ?: 'DAY';
+            $int = $intervals[(string) $value['int'] ?: 'd'] ?: 'DAY';
             $interval = new SqlInterval($int, $value['until']);
             return new Q(array(
                 "{$name}__lte" => $now->minus($interval),
             ));
         case 'distfut':
-            $int = $intervals[$value['int'] ?: 'd'] ?: 'DAY';
+            $int = $intervals[(string) $value['int'] ?: 'd'] ?: 'DAY';
             $interval = new SqlInterval($int, $value['until']);
             return new Q(array(
                 "{$name}__gte" => $now->plus($interval),
@@ -3332,7 +3336,7 @@ class DepartmentField extends ChoiceField {
 
     function getValue() {
          if (($value = parent::getValue()) && ($id=$this->getClean()))
-            return $value[$id];
+            return is_array($value) ? $value[$id] : $value;
      }
 
     function to_php($value, $id=false) {
@@ -3993,7 +3997,8 @@ class FileUploadField extends FormField {
         // Check invalid image hacks
         if ($file['tmp_name']
                 && stripos($file['type'], 'image/') === 0
-                && !exif_imagetype($file['tmp_name']))
+                && !(exif_imagetype($file['tmp_name'])
+                    || mime_content_type($file['tmp_name']) === 'image/svg+xml'))
             return false;
 
         return true;
@@ -5243,6 +5248,8 @@ class FileUploadWidget extends Widget {
     );
 
     function render($options=array()) {
+        global $ost;
+
         $config = $this->field->getConfiguration();
         $name = $this->field->getFormName();
         $id = substr(md5(spl_object_hash($this)), 10);
@@ -5328,6 +5335,7 @@ class FileUploadWidget extends Widget {
           url: 'ajax.php/form/upload/<?php echo $field_id; ?>',
           link: $('#<?php echo $id; ?>').find('a.manual'),
           paramname: 'upload[]',
+          data: {"__CSRFToken__": "<?php echo $ost->getCSRF()->getToken(); ?>"},
           fallback_id: 'file-<?php echo $id; ?>',
           allowedfileextensions: <?php echo JsonDataEncoder::encode(
             $config['__extensions'] ?: array()); ?>,
@@ -6178,7 +6186,7 @@ class TransferForm extends Form {
             break;
         default:
             throw new Exception(sprintf(__('%s: Unknown template style %s'),
-                        get_class(), $options['template']));
+                        get_class($this), $options['template']));
         }
 
         $form = $this;

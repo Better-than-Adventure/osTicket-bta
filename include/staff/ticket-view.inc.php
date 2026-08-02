@@ -252,8 +252,7 @@ if($ticket->isOverdue())
                 } ?>
 
 
-<?php           if ($thisstaff->hasPerm(Email::PERM_BANLIST)
-                    && $role->hasPerm(Ticket::PERM_REPLY)) {
+<?php           if ($thisstaff->hasPerm(Email::PERM_BANLIST)) {
                      if(!$emailBanned) {?>
                         <li><a class="confirm-action" id="ticket-banemail"
                             href="#banemail"><i class="icon-ban-circle"></i> <?php echo sprintf(

@@ -68,8 +68,9 @@ if ($_POST) {
 if ($_POST && isset($_POST['userid'])) {
     // Lookup support backends for this staff
     $username = trim($_POST['userid']);
-    if ($user = StaffAuthenticationBackend::process($username,
-            substr($_POST['passwd'], 0, 128), $errors)) {
+    if (Validator::is_userid($username, $errors['err'], false)
+        && ($user = StaffAuthenticationBackend::process($username,
+            substr($_POST['passwd'], 0, 128), $errors))) {
         $redirect($user->isValid() ? $dest : 'login.php');
     }
 

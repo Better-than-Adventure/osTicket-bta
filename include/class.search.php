@@ -44,7 +44,7 @@ abstract class SearchBackend {
     );
 
     abstract function update($model, $id, $content, $new=false, $attrs=array());
-    abstract function find($query, QuerySet $criteria, $addRelevance=true);
+    abstract function find($query, QuerySet $criteria, $addRelevance=true, $options=array());
 
     static function register($backend=false) {
         $backend = $backend ?: get_called_class();
@@ -79,9 +79,9 @@ class SearchInterface {
         $this->bootstrap();
     }
 
-    function find($query, QuerySet $criteria, $addRelevance=true) {
+    function find($query, QuerySet $criteria, $addRelevance=true, $options=array()) {
         $query = Format::searchable($query);
-        return $this->backend->find($query, $criteria, $addRelevance);
+        return $this->backend->find($query, $criteria, $addRelevance, $options);
     }
 
     function update($model, $id, $content, $new=false, $attrs=array()) {
@@ -327,7 +327,7 @@ class MysqlSearchBackend extends SearchBackend {
         return implode('', $results);
     }
 
-    function find($query, QuerySet $criteria, $addRelevance=true) {
+    function find($query, QuerySet $criteria, $addRelevance=true, $options=array()) {
         global $thisstaff;
 
         // MySQL usually doesn't handle words shorter than three letters
@@ -338,6 +338,10 @@ class MysqlSearchBackend extends SearchBackend {
         $criteria = clone $criteria;
 
         $mode = ' IN NATURAL LANGUAGE MODE';
+
+        // Allow boolean full-text syntax to be disabled
+        $allow_boolean = !array_key_exists('boolean', $options)
+            || $options['boolean'];
 
         // According to the MySQL full text boolean mode, this grammar is
         // assumed:
@@ -359,7 +363,8 @@ class MysqlSearchBackend extends SearchBackend {
         // Require the use of at least one operator and conform to the
         // boolean mode grammar
         $T = array();
-        if (preg_match('`(^|\s)["()<>~+-]`u', $query, $T)
+        if ($allow_boolean
+            && preg_match('`(^|\s)["()<>~+-]`u', $query, $T)
             && preg_match("`^{$BOOLEAN}$`u", $query, $T)
         ) {
             // If using boolean operators, search in boolean mode. This regex
@@ -371,8 +376,11 @@ class MysqlSearchBackend extends SearchBackend {
         #elseif (count(explode(' ', $query)) == 1)
         #    $mode = ' WITH QUERY EXPANSION';
 
-        // Strip colon (:num) to avoid possible params injection
-        $query = preg_replace('/:(\d+)/i', '$1', $query);
+        // Sanitize query to avoid possible SQL injection via parameter markers
+        // This regex matches one or more colons followed by one or more digits,
+        // and then replaces the match with only the digits (i.e. stripping the colon(s)).
+        $query = preg_replace('/:+(\d+)/', '$1', $query);
+
         // escape query and using it as search
         $search = 'MATCH (Z1.title, Z1.content) AGAINST ('.db_input($query).$mode.')';
 
@@ -471,7 +479,7 @@ class MysqlSearchBackend extends SearchBackend {
      * not indexed in the _search table and add it to the index.
      */
     function IndexOldStuff() {
-        $class = get_class();
+        $class = get_class($this);
         $auto_create = function($db_error) use ($class) {
 
             if ($db_error != 1146)
@@ -905,7 +913,10 @@ class SavedQueue extends CustomQueue {
         $query = $this->getQuery();
         if ($agent)
             $query = $agent->applyVisibility($query);
-        $query->limit(false)->offset(false)->order_by(false);
+        $query->filter(Q::any([
+                'ticket_pid__isnull' => true,
+                'flags__hasbit' => Ticket::FLAG_LINKED
+            ]))->limit(false)->offset(false)->order_by(false);
         try {
             return $query->count();
         } catch (Exception $e) {

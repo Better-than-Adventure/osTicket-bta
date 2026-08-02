@@ -146,6 +146,7 @@ $info=Format::htmlchars(($errors && $_POST)?$_POST:$info, true);
                     &nbsp;<span class="error">*&nbsp;<?php echo $warn; ?></span>
                 <?php } ?>
                 <i class="help-tip icon-question-sign" href="#department"></i>
+                <div class="error"><?php echo $errors['dept_id']; ?></div>
             </td>
         </tr>
         <tr class="border">
