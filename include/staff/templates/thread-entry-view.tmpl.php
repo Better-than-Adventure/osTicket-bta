@@ -27,7 +27,7 @@ do {
         echo Format::htmlchars($E->title).' — '; ?></strong>
     <em><?php if (strpos($E->updated, '0000-') === false)
         echo sprintf(__('Edited on %s by %s'), Format::datetime($E->updated),
-            ($editor = $E->getEditor()) ? $editor->getName() : '');
+            ($editor = $E->getEditor()) ? Format::htmlchars($editor->getName()) : '');
     else
         echo __('Original'); ?></em>
     </a>

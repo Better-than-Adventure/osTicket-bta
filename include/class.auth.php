@@ -1255,7 +1255,7 @@ class PasswordResetTokenBackend extends StaffAuthenticationBackend {
                 || $id != $staff->getId())
             $errors['msg'] = __('Invalid reset token');
         elseif (!($ts = $_config->lastModified($_POST['token']))
-                && ($ost->getConfig()->getPwResetWindow() < (time() - strtotime($ts))))
+                || ($ost->getConfig()->getPwResetWindow() < (time() - strtotime($ts))))
             $errors['msg'] = __('Invalid reset token');
         elseif (!$staff->forcePasswdRest())
             $errors['msg'] = __('Unable to reset password');
@@ -1482,7 +1482,7 @@ class ClientPasswordResetTokenBackend extends UserAuthenticationBackend {
                 || $id != 'c'.$client->getId())
             $errors['msg'] = __('Invalid reset token');
         elseif (!($ts = $_config->lastModified($_POST['token']))
-                && ($ost->getConfig()->getPwResetWindow() < (time() - strtotime($ts))))
+                || ($ost->getConfig()->getPwResetWindow() < (time() - strtotime($ts))))
             $errors['msg'] = __('Invalid reset token');
         elseif (!$acct->forcePasswdReset())
             $errors['msg'] = __('Unable to reset password');

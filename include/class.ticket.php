@@ -715,7 +715,7 @@ implements RestrictedAccess, Threadable, Searchable {
         if (!$lock->delete())
             return false;
 
-        $this->lock = null;
+        $this->lock = 0;
         return $this->save();
     }
 
@@ -2725,7 +2725,7 @@ implements RestrictedAccess, Threadable, Searchable {
              && ($msg=$tpl->getTransferAlertMsgTemplate())
          ) {
             $msg = $this->replaceVars($msg->asArray(),
-                array('comments' => $note, 'staff' => $thisstaff));
+                array('comments' => $note ?: '', 'staff' => $thisstaff));
             // Recipients
             $recipients = array();
             // Assigned staff or team... if any
@@ -4370,7 +4370,7 @@ implements RestrictedAccess, Threadable, Searchable {
             $ticket->email_id = $vars['emailId'];
 
         //Make sure the origin is staff - avoid firebug hack!
-        if ($vars['duedate'] && !strcasecmp($origin,'staff'))
+        if ($vars['duedate'] && in_array(strtolower($origin), ['staff', 'api']))
             $ticket->duedate = date('Y-m-d G:i',
                 Misc::dbtime($vars['duedate']));
 
@@ -4651,7 +4651,6 @@ implements RestrictedAccess, Threadable, Searchable {
         // post response - if any
         $response = null;
         if ($vars['response'] && $role->hasPerm(Ticket::PERM_REPLY)) {
-            $vars['response'] = $ticket->replaceVars($vars['response']);
             // $vars['cannedatachments'] contains the attachments placed on
             // the response form.
             $response = $ticket->postReply($vars, $errors, ($alert &&

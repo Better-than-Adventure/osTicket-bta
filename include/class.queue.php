@@ -973,7 +973,7 @@ class CustomQueue extends VerySimpleModel {
             // Consider keyword searching
             if ($name === ':keywords') {
                 global $ost;
-                $qs = $ost->searcher->find($value, $qs, false);
+                $qs = $ost->searcher->find($value, $qs, false, ['boolean' => false]);
             }
             else {
                 $nullable = ($method === 'nset') ? false : null;
@@ -1598,7 +1598,7 @@ abstract class QueueColumnAnnotation {
     }
 
     function getClassName() {
-        return @$this->config['c'] ?: get_class();
+        return @$this->config['c'] ?: get_class($this);
     }
 
     static function getAnnotations($root) {
@@ -1845,7 +1845,7 @@ extends QueueColumnAnnotation {
     function getDecoration($row, $text) {
         $flags = $row['flags'];
         $linked = ($flags & Ticket::FLAG_LINKED) != 0;
-        if ($linked && $_REQUEST['a'] == 'search')
+        if ($linked)
             return '<i class="icon-link"></i>';
     }
 

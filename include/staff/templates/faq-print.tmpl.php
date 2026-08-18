@@ -8,5 +8,5 @@
 <br/>
 
 <div class="thread-body bleed">
-<?php echo $faq->getLocalAnswer(); ?>
+<?php echo Format::stripExternalImages($faq->getLocalAnswer(), true); ?>
 </div>

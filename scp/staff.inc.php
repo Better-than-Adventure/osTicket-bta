@@ -104,8 +104,9 @@ define('SESSION_MAXLIFE', $thisstaff->getMaxIdleTime());
 $thisstaff->refreshSession();
 
 /******* CSRF Protectin *************/
-// Enforce CSRF protection for POSTS
-if ($_POST  && !$ost->checkCSRFToken()) {
+// Enforce CSRF protection for state-changing methods
+if (in_array($_SERVER['REQUEST_METHOD'], ['POST', 'PUT', 'PATCH', 'DELETE'])
+        && !$ost->checkCSRFToken()) {
     Http::response(400, __('Valid CSRF Token Required'));
     exit;
 }

@@ -11,10 +11,20 @@ if ($_SESSION[':form-data'] && !$_GET['tid'])
 
 //  Use thread entry to seed the ticket
 if (!$user && $_GET['tid'] && ($entry = ThreadEntry::lookup($_GET['tid']))) {
-    if ($entry->getThread()->getObjectType() == 'T')
+    if ($entry->getThread()->getObjectType() == 'T') {
       $oldTicketId = $entry->getThread()->getObjectId();
-    if ($entry->getThread()->getObjectType() == 'A')
+
+      if (!($oldTicket = Ticket::lookup($oldTicketId))
+              || !$oldTicket->checkStaffPerm($thisstaff))
+          Http::response(403, 'Access Denied');
+    }
+    if ($entry->getThread()->getObjectType() == 'A') {
       $oldTaskId = $entry->getThread()->getObjectId();
+
+      if (!($oldTask = Task::lookup($oldTaskId))
+              || !$oldTask->checkStaffPerm($thisstaff))
+          Http::response(403, 'Access Denied');
+    }
 
     $_SESSION[':form-data']['message'] = Format::htmlchars($entry->getBody());
     $_SESSION[':form-data']['ticketId'] = $oldTicketId;

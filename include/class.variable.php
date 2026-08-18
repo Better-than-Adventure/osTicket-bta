@@ -71,6 +71,15 @@ class VariableReplacer {
         $tag = mb_strtolower($tag);
         $rv = null;
 
+        // Deny sensitive attributes outright
+        $blacklist = [
+            'passwd',
+            'password',
+            'authkey',
+        ];
+        if (in_array($tag, $blacklist))
+            return "";
+
         if (!is_object($obj)) {
             if ($tag && is_array($obj) && array_key_exists($tag, $obj))
                 $rv = $obj[$tag];

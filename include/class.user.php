@@ -232,7 +232,7 @@ implements TemplateVariable, Searchable {
                 list($name) = explode('@', $vars['email'], 2);
 
             $user = new User(array(
-                'name' => Format::htmldecode(Format::sanitize($name, false)),
+                'name' => trim(Format::htmldecode(Format::sanitize($name, false))),
                 'created' => new SqlFunction('NOW'),
                 'updated' => new SqlFunction('NOW'),
                 //XXX: Do plain create once the cause
@@ -589,7 +589,7 @@ implements TemplateVariable, Searchable {
                         $type = array('type' => 'edited', 'key' => 'Name');
                         Signal::send('object.edited', $this, $type);
                     }
-                    $this->name = $name;
+                    $this->name = trim($name);
                 }
 
                 // Email address field

@@ -31,7 +31,7 @@ if ($cfg->isAvatarsEnabled() && $user)
                 </span>
             </div>
     <?php
-                echo sprintf(__('<b>%s</b> posted %s'), $name,
+                echo sprintf(__('<b>%s</b> posted %s'), Format::htmlchars($name),
                     sprintf('<time datetime="%s" title="%s">%s</time>',
                         date(DateTime::W3C, Misc::db2gmtime($entry->created)),
                         Format::daydatetime($entry->created),
@@ -78,4 +78,39 @@ if ($cfg->isAvatarsEnabled() && $user)
     <?php
         } ?>
     </div>
+    <div class="thread-body" id="thread-id-<?php echo $entry->getId(); ?>">
+        <div><?php echo $entry->getBody()->toHtml(); ?></div>
+        <div class="clear"></div>
+<?php
+    if ($entry->has_attachments) { ?>
+    <div class="attachments"><?php
+        foreach ($entry->attachments as $A) {
+            if ($A->inline)
+                continue;
+            $size = '';
+            if ($A->file->size)
+                $size = sprintf('<small class="filesize faded">%s</small>', Format::file_size($A->file->size));
+?>
+        <span class="attachment-info">
+        <i class="icon-paperclip icon-flip-horizontal"></i>
+        <a  class="no-pjax truncate filename"
+            href="<?php echo $A->file->getDownloadUrl(['id' => $A->getId()]);
+            ?>" download="<?php echo Format::htmlchars($A->getFilename()); ?>"
+            target="_blank"><?php echo Format::htmlchars($A->getFilename());
+        ?></a><?php echo $size;?>
+        </span>
+<?php   }  ?>
+    </div>
+<?php } ?>
+    </div>
+<?php
+    if ($urls = $entry->getAttachmentUrls()) { ?>
+        <script type="text/javascript">
+            $('#thread-id-<?php echo $entry->getId(); ?>')
+                .data('urls', <?php
+                    echo JsonDataEncoder::encode($urls); ?>)
+                .data('id', <?php echo $entry->getId(); ?>);
+        </script>
+<?php
+    } ?>
 </div>

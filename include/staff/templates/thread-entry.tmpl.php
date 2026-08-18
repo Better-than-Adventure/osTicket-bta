@@ -71,7 +71,7 @@ if ($user && $cfg->isAvatarsEnabled())
         </span>
         </div>
 <?php
-        echo sprintf(__('<b>%s</b> posted %s'), $name,
+        echo sprintf(__('<b>%s</b> posted %s'), Format::htmlchars($name),
             sprintf('<a name="entry-%d" href="#entry-%1$s"><time %s
                 datetime="%s" data-toggle="tooltip" title="%s">%s</time></a>',
                 $entry->id,
@@ -82,7 +82,7 @@ if ($user && $cfg->isAvatarsEnabled())
             )
         ); ?>
         <span style="max-width:400px" class="faded title truncate"><?php
-            echo $entry->title; ?>
+            echo Format::htmlchars($entry->title); ?>
         </span>
     </div>
     <div class="thread-body no-pjax">

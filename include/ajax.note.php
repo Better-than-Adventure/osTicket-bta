@@ -13,6 +13,9 @@ class NoteAjaxAPI extends AjaxController {
             Http::response(403, "Login required");
         elseif (!($note = QuickNote::lookup($id)))
             Http::response(205, "Note not found");
+        elseif (($note->staff_id !== $thisstaff->getId())
+                && !$thisstaff->isAdmin())
+            Http::response(403, "Access Denied");
 
         Http::response(200, $note->display());
     }
@@ -24,6 +27,9 @@ class NoteAjaxAPI extends AjaxController {
             Http::response(403, "Login required");
         elseif (!($note = QuickNote::lookup($id)))
             Http::response(205, "Note not found");
+        elseif (($note->staff_id !== $thisstaff->getId())
+                && !$thisstaff->isAdmin())
+            Http::response(403, "Access Denied");
         elseif (!isset($_POST['note']) || !$_POST['note'])
             Http::response(422, "Send `note` parameter");
 
@@ -41,6 +47,9 @@ class NoteAjaxAPI extends AjaxController {
             Http::response(403, "Login required");
         elseif (!($note = QuickNote::lookup($id)))
             Http::response(205, "Note not found");
+        elseif (($note->staff_id !== $thisstaff->getId())
+                && !$thisstaff->isAdmin())
+            Http::response(403, "Access Denied");
         elseif (!$note->delete())
             Http::response(500, "Unable to remove note");
 
@@ -52,6 +61,9 @@ class NoteAjaxAPI extends AjaxController {
 
         if (!$thisstaff)
             Http::response(403, "Login required");
+        elseif (!in_array(substr($ext_id, 0, 1), ['O', 'U'])
+                && !$thisstaff->isAdmin())
+            Http::response(403, "Access Denied");
         elseif (!isset($_POST['note']) || !$_POST['note'])
             Http::response(422, "Send `note` parameter");
 

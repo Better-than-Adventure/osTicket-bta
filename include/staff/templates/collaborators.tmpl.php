@@ -84,7 +84,7 @@ if ($_POST && $thread) {
                   $c->getUserId(),
                   $c->isActive() ? 'selected="selected"' : '',
                   $c->isActive() ? 'active' : 'disabled',
-                  $c->getName());
+                  Format::htmlchars($c->getName()));
     }
     $recipients = sprintf(__('(%d of %d)'),
           $thread->getNumActiveCollaborators(),
@@ -92,9 +92,9 @@ if ($_POST && $thread) {
     ?>
     <script type="text/javascript">
         $(function() {
-            $('#t<?php echo $thread->getId(); ?>-recipients').html('<?php echo $recipients; ?>');
+            $('#t<?php echo $thread->getId(); ?>-recipients').html('<?php echo JsonDataEncoder::encode($recipients); ?>');
             $('#t<?php echo $thread->getId(); ?>-collaborators').html('<?php echo $thread->getNumCollaborators(); ?>');
-            $('#collabselection').html('<?php echo $options; ?>');
+            $('#collabselection').html('<?php echo JsonDataEncoder::encode($options); ?>');
             });
     </script>
 <?php

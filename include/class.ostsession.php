@@ -250,13 +250,19 @@ class osTicketSession {
     }
 
     static function renewCookie($baseTime=false, $window=false) {
+        global $ost;
+
         $ttl = $window ?: SESSION_TTL;
         $expire = ($baseTime ?: time()) + $ttl;
-        setcookie(session_name(), session_id(), $expire,
-            ini_get('session.cookie_path'),
-            ini_get('session.cookie_domain'),
-            ini_get('session.cookie_secure'),
-            ini_get('session.cookie_httponly'));
+        $opts = [
+            'expires' => $expire,
+            'path' => ini_get('session.cookie_path'),
+            'domain' => ini_get('session.cookie_domain'),
+            'secure' => ini_get('session.cookie_secure'),
+            'httponly' => ini_get('session.cookie_httponly'),
+            'samesite' => !empty($ost->getConfig()->getAllowIframes()) ? 'None' : 'Strict'
+        ];
+        setcookie(session_name(), session_id(), $opts);
         // Trigger expire update - neeed for secondary handlers that only
         // log new sessions
          self::expire(session_id(), $ttl);
@@ -326,7 +332,7 @@ class DatabaseSessionRecord extends VerySimpleModel
         return $this->session_id;
     }
 
-    public function setData(string $data = null) {
+    public function setData(?string $data = null) {
         $this->session_data = $data;
         return $this;
     }
@@ -417,7 +423,7 @@ class DatabaseSessionRecord extends VerySimpleModel
         }
         catch (DoesNotExist $e) {
             // We're auto-creating model (unsaved) when one doesn't exist?
-            $record = $autocreate ? self::create($id) : null;
+            $record = ($autocreate && ctype_alnum($id)) ? self::create($id) : null;
         }
         catch (OrmException | Exception $ex) {
             // This could happen if more than one record exits in the
@@ -645,7 +651,7 @@ implements osTicket\Session\SessionRecordInterface {
         return $this->data->data;
     }
 
-    public function setData(string $data = null) {
+    public function setData(?string $data = null) {
         $this->data->data = $data;
     }
 

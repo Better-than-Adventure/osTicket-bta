@@ -23,6 +23,7 @@ namespace osTicket\Mail {
     use Laminas\Mime\Part as MimePart;
     use Laminas\Mail\Header;
     use osTicket\Mail\Header\ReturnPath;
+    use osTicket\Mime\Rfc2231Part;
 
     class  Message extends MailMessage {
         // Message Id (mid)
@@ -106,7 +107,7 @@ namespace osTicket\Mail {
             $part = new MimePart($text);
             $part->type = Mime::TYPE_TEXT;
             $part->charset = $this->charset;
-            $part->encoding = $encoding ?: Mime::ENCODING_BASE64;
+            $part->encoding = $encoding;
             $this->addMimeContent($part);
         }
 
@@ -120,24 +121,28 @@ namespace osTicket\Mail {
         }
 
         public function addInlineImage($id, $file) {
-            $f = new MimePart($file->getData());
+            $name = $file->getName();
+            $asciiName = self::asciiFallback($name);
+            $f = new Rfc2231Part($file->getData());
             $f->id = $id;
-            $f->type = sprintf('%s; name="%s"',
-                    $file->getMimeType(),
-                    $file->getName());
-            $f->filename = $file->getName();
-            $f->disposition = Mime::DISPOSITION_INLINE;
+            $f->type = $file->getMimeType();
             $f->encoding = Mime::ENCODING_BASE64;
+            $f->disposition = Mime::DISPOSITION_INLINE;
+            $f->filename = $asciiName;
+            $f->setRawFilename($name);
             $this->addMimePart($f);
             $this->hasInlineImages = true;
         }
 
         public function addAttachment($file, $name=null)  {
-            $f = new MimePart($file->getData());
+            $name = $name ?: $file->getName();
+            $asciiName = self::asciiFallback($name);
+            $f = new Rfc2231Part($file->getData());
             $f->type = $file->getMimeType();
-            $f->filename = $name ?: $file->getName();
-            $f->disposition = Mime::DISPOSITION_ATTACHMENT;
             $f->encoding = Mime::ENCODING_BASE64;
+            $f->disposition = Mime::DISPOSITION_ATTACHMENT;
+            $f->filename = $asciiName;
+            $f->setRawFilename($name);
             $this->addMimePart($f);
             $this->hasAttachments = true;
         }
@@ -286,6 +291,14 @@ namespace osTicket\Mail {
                 $this->setBody();
         }
 
+        private static function asciiFallback(string $utf8): string {
+            $ascii = @iconv('UTF-8', 'ASCII//TRANSLIT//IGNORE', $utf8);
+            $ascii = $ascii !== false ? $ascii : '';
+            // Sanitize to header-safe ASCII
+            $ascii = preg_replace('/[^A-Za-z0-9._-]+/', '_', $ascii ?? '') ?? '';
+            return $ascii !== '' ? $ascii : $utf8;
+        }
+
     }
 
     // This is a wrapper class for Mime/Message that generates multipart
@@ -412,7 +425,7 @@ namespace osTicket\Mail {
                     return true;
                 } elseif (preg_match('/^-ERR (.*+)$/i',
                             $response, $matches)) {
-                    throw new Exception($matches[2]);
+                    throw new Exception($matches[1]);
                 } else {
                     break;
                 }
@@ -515,7 +528,7 @@ namespace osTicket\Mail {
          *
          */
         public function getRawEmail(int $i) {
-            return $this->getRawHeader($i) . $this->getRawContent($i);
+            return trim($this->getRawHeader($i)) . "\r\n\r\n" . $this->getRawContent($i);
         }
 
         /*

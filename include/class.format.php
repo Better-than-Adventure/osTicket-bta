@@ -278,6 +278,11 @@ class Format {
             $props = array();
             foreach ($styles as $i=>&$s) {
                 @list($prop, $val) = explode(':', $s);
+                // Strip all CSS url() usages in inline styles
+                if (preg_match('/\burl\s*\(/i', $val)) {
+                    unset($styles[$i]);
+                    continue;
+                }
                 if (isset($props[$prop])) {
                     unset($styles[$i]);
                     continue;
@@ -334,10 +339,10 @@ class Format {
                   ':<html[^>]+:i',              # drop html attributes
                   ':<(a|span) (name|style)="(mso-bookmark\:)?_MailEndCompose">(.+)?<\/(a|span)>:', # Drop _MailEndCompose
                   ':<div dir=(3D)?"ltr">(.*?)<\/div>(.*):is', # drop Gmail "ltr" attributes
-                  ':data-cid="[^"]*":',         # drop image cid attributes
-                  '(position:[^!";]+;?)',
+                  '(position: ?(-webkit-)?(static|relative|fixed|absolute|sticky|initial|inherit);?)', # Position styling
+                  ':[\x{2002}-\x{200B}]+:u',    # unicode spaces
             ),
-            array('', '', '', '', '<html', '$4', '$2 $3', '', ''),
+            array('', '', '', '', '<html', '$4', '$2 $3', '', ' '),
             $html);
 
         // HtmLawed specific config only
@@ -347,7 +352,7 @@ class Format {
             'comment' => 1, //Remove html comments (OUTLOOK LOVE THEM)
             'tidy' => -1,
             'elements' => '*-form-input-button',
-            'deny_attribute' => 'id, formaction, action, on*',
+            'deny_attribute' => 'id, formaction, action, srcset, data*, on*',
             'schemes' => 'href: aim, feed, file, ftp, gopher, http, https, irc, mailto, news, nntp, sftp, ssh, telnet; *:file, http, https; src: cid, http, https, data',
             'hook_tag' => function($e, $a=0) { return Format::__html_cleanup($e, $a); },
         );
@@ -356,9 +361,12 @@ class Format {
         if ($cfg)
             $whitelist = $cfg->getIframeWhitelist();
         if (!empty($whitelist)) {
+            $whitelist_quoted = array_map(function ($d) {
+                return preg_quote($d, '`');
+            }, $whitelist);
             $config['elements'] .= '+iframe';
             $config['spec'] = 'iframe=-*,height,width,type,style,src(match="`^(https?:)?//(www\.)?('
-                .implode('|', $whitelist)
+                .implode('|', $whitelist_quoted)
                 .')(\?|/|#)([^@]*)$`i"),frameborder'.($options['spec'] ? '; '.$options['spec'] : '').',allowfullscreen';
         }
 
@@ -423,7 +431,7 @@ class Format {
         return htmlspecialchars_decode($var, $flags);
     }
 
-    static function http_query_string(string $query, array $filter = null) {
+    static function http_query_string(string $query, ?array $filter = null) {
         $args = [];
         parse_str($query, $args);
         if ($filter && is_array($filter))
@@ -482,16 +490,17 @@ class Format {
         // Allowed Inline External Image Extensions
         $allowed = array('gif', 'png', 'jpg', 'jpeg');
         $exclude = !$cfg->allowExternalImages();
-        $local = false;
 
-        $input = preg_replace_callback('/<img ([^>]*)(src="([^"]+)")([^>]*)\/?>/',
-            function($match) use ($local, $allowed, $exclude, $display) {
-                if (strpos($match[3], 'cid:') !== false)
-                    $local = true;
+        $input = preg_replace_callback('/<img\b([^>]*?)\bsrc\s*=\s*(["\'])(.*?)\2([^>]*)\/?>/i',
+            function($match) use ($allowed, $exclude, $display) {
+                $src = $match[3];
+
+                // CID is only valid if it is the prefix of the src value
+                $local = (stripos(ltrim($src), 'cid:') === 0);
 
                 // Split the src URL and get the extension
-                $part = parse_url($match[3], PHP_URL_PATH);
-                $path = explode('.', $part);
+                $part = parse_url($src, PHP_URL_PATH);
+                $path = explode('.', (string) $part);
                 $ext = preg_split('/[^A-Za-z]/', end($path))[0];
 
                 if (!$local && (($exclude && $display) || !in_array($ext, $allowed)))
@@ -499,7 +508,8 @@ class Format {
                 else
                     return $match[0];
             },
-            $input);
+            $input
+        );
 
         return $input;
     }
@@ -536,7 +546,8 @@ class Format {
                 '/[\x{23E0}-\x{23EF}]/u',   # More Buttons
                 '/[\x{2310}-\x{231F}]/u',   # Hourglass/Watch
                 '/[\x{1000B6}]/u',          # Private Use Area (Plane 16)
-                '/[\x{2322}-\x{232F}]/u'    # Keyboard
+                '/[\x{2322}-\x{232F}]/u',   # Keyboard
+                '/\x{00B0}|\x{00BA}/u'      # Degree Symbol
             ), '', $text);
     }
 
@@ -591,6 +602,9 @@ class Format {
         $html = preg_replace_callback('/("|&quot;)cid:([\w._-]{32})("|&quot;)/',
         function($match) use ($options, $images) {
             if (!($file = AttachmentFile::lookup($match[2])))
+                return $match[0];
+
+            if (!$file->isInlineSafeImage())
                 return $match[0];
 
             return sprintf('"%s" data-cid="%s"',
